@@ -1,0 +1,42 @@
+.expandable {
+    background-color: var(--colour-primary);
+    color: var(--colour-text);
+    border-radius: 5px;
+}
+
+.expandable-header, .expandable-header-expanded {
+    border-radius: 5px;
+    color: var(--colour-text);
+    font-size: larger;
+    text-align: left;
+    padding: 4px;
+    user-select: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease-out;
+}
+
+.expandable-header:hover, .expandable-header-expanded:hover {
+    background-color: var(--colour-interactable);
+}
+
+.expandable-header::before, .expandable-header-expanded::before {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    display: inline-block;
+    width: 1em;
+}
+
+.expandable-header::before {
+    content: '\f105';
+}
+
+.expandable-header-expanded::before {
+    content: '\f107';
+}
+
+.expandable-content {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 5px;
+    padding: 5px;
+}

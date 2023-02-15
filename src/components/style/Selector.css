@@ -1,0 +1,69 @@
+.selector-option {
+    transition: background-color 0.15s ease-out;
+    cursor: pointer;
+    text-align: left;
+    padding: 5px;
+}
+
+.selector-option:last-child {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.selector-option:hover {
+    background-color: var(--colour-primary);
+}
+
+.selector-body {
+    position: relative;
+    width: 100%;
+}
+
+.selector {
+    color: var(--colour-text);
+    background-color: var(--colour-primary);
+    transition: background-color 0.15s ease-out;
+    width: 100%;
+    border-radius: 5px;
+    user-select: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    justify-items: center;
+    align-items: center;
+    padding: 5px;
+}
+
+.selector::after {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    content: '\f107';
+}
+
+.selector-expanded::after {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    content: '\f106';
+}
+
+.selector-expanded, .selector:hover {
+    background-color: var(--colour-interactable);
+}
+
+.selector-expanded {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.selector-options {
+    z-index: 3000;
+    color: var(--colour-text);
+    background-color: var(--colour-interactable);
+    position: absolute;
+    user-select: none;
+    width: 100%;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    overflow: scroll;
+    max-height: 300px;
+}

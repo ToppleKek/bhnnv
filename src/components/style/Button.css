@@ -1,0 +1,35 @@
+.generic-button {
+    user-select: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.positive-button {
+    color: black !important;
+    transition: background-color 0.15s ease-out;
+    background-color: var(--colour-positive_button);
+}
+
+.positive-button:hover {
+    background-color: var(--colour-positive_button_hover);
+}
+
+.negative-button {
+    background-color: var(--colour-negative_button);
+    transition: background-color 0.15s ease-out;
+}
+
+.negative-button:hover {
+    background-color: var(--colour-negative_button_hover);
+}
+
+.normal-button {
+    color: var(--colour-text);
+    background-color: var(--colour-primary);
+    transition: background-color 0.15s ease-out;
+}
+
+.normal-button:hover {
+    background-color: var(--colour-interactable);
+
+}

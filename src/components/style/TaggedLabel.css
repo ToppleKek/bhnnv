@@ -1,0 +1,7 @@
+.tag {
+    background-color: var(--colour-grid_border);
+    color: var(--colour-text);
+    border-radius: 5px;
+    padding: 2px;
+    margin-right: 0.5em;
+}

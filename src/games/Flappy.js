@@ -28,7 +28,7 @@ let canvas_w = 0;
 let canvas_h = 0;
 
 class Bird {
-    static gravity = 0.6;
+    static gravity = 0.55;
     static terminal_y = 10;
 
     constructor() {
@@ -43,22 +43,23 @@ class Bird {
             this.rect.x, this.rect.y + this.rect.h,
             this.rect.x + this.rect.w, this.rect.y + this.rect.h,
         ];
+        const offset = 0;
+        const vertex_count = 4;
+
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertex_count);
     }
 
     update(up) {
         this.rect.y += this.y_vel;
         this.y_vel += Bird.gravity;
 
-        if (up) {
-            console.log("up!");
-            this.y_vel = -8;
-        }
+        if (up)
+            this.y_vel = -6.5;
+
 
         if (this.y_vel > Bird.terminal_y)
             this.y_vel = Bird.terminal_y;
-        // else if (this.y_vel < -Bird.terminal_y)
-        //     this.y_vel = -Bird.terminal_y;
 
         if (this.rect.y >= canvas_h - this.rect.h)
             this.rect.y = canvas_h - this.rect.h;
@@ -67,7 +68,53 @@ class Bird {
     }
 }
 
+class Wall {
+    constructor() {
+        this.rect = { x: canvas_w, y: 0, w: 100, h: Math.floor(Math.random() * (canvas_h - 150)) };
+        this.bottom_rect = { x: this.rect.x, y: this.rect.h + 150, w: 100, h: canvas_h - (this.rect.h + 150) };
+    }
+
+    render(gl) {
+        {
+            const vertices = [
+                this.rect.x, this.rect.y,
+                this.rect.x + this.rect.w, this.rect.y,
+                this.rect.x, this.rect.y + this.rect.h,
+                this.rect.x + this.rect.w, this.rect.y + this.rect.h,
+            ];
+            const offset = 0;
+            const vertex_count = 4;
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+            gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertex_count);
+        }
+        {
+            const vertices = [
+                this.bottom_rect.x, this.bottom_rect.y,
+                this.bottom_rect.x + this.bottom_rect.w, this.bottom_rect.y,
+                this.bottom_rect.x, this.bottom_rect.y + this.bottom_rect.h,
+                this.bottom_rect.x + this.bottom_rect.w, this.bottom_rect.y + this.bottom_rect.h,
+            ];
+            const offset = 0;
+            const vertex_count = 4;
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+            gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertex_count);
+        }
+
+    }
+
+    update() {
+        this.rect.x -= 2;
+        this.bottom_rect.x = this.rect.x;
+    }
+}
+
 export default class Flappy {
+    constructor(data_callback) {
+        this.data_callback = data_callback;
+    }
+
     init(canvas, time_step) {
         console.log('trying init');
         if (this.initialized)
@@ -83,10 +130,13 @@ export default class Flappy {
         canvas_w = this.canvas.width;
         canvas_h = this.canvas.height;
         this.time_step = time_step;
+        this.running = true;
+        this.ticks = 0;
 
         this.walls = [];
         this.bird = new Bird();
         this.keys = [];
+
         window.addEventListener('keydown', this._on_key_down.bind(this));
         window.addEventListener('keyup', this._on_key_up.bind(this));
 
@@ -132,7 +182,15 @@ export default class Flappy {
 
         // END GL SETUP
         this.initialized = true;
+    }
 
+    game_reset() {
+        // this.walls = [];
+        // this.bird = new Bird();
+
+        // window.cancelAnimationFrame(this.animation_frame);
+        this.running = false;
+        console.log('reset');
     }
 
     _on_key_up(e) {
@@ -189,16 +247,16 @@ export default class Flappy {
 
     // TODO: Link with ENeuralNetwork
     get_next_input() {
-        // let ret = false;
+        let ret = false;
 
-        // if (this.keys.includes(' ')) {
-        //     ret = true;
-        //     this.keys.splice(this.keys.indexOf(' '), 1);
-        // }
+        if (this.keys.includes(' ')) {
+            ret = true;
+            this.keys.splice(this.keys.indexOf(' '), 1);
+        }
 
-        // return ret;
+        return ret;
 
-        return Math.random() < 0.04;
+        // return Math.random() < 0.04;
     }
 
     render() {
@@ -209,14 +267,15 @@ export default class Flappy {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
         this.bird.render(this.gl);
-        const offset = 0;
-        const vertex_count = 4;
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, offset, vertex_count);
+        this.walls.forEach((wall) => wall.render(this.gl));
     }
 
     tick(dt) {
         if (!this.canvas)
             return;
+
+        if (this.current_time === 0 && dt !== undefined)
+            this.current_time = dt;
 
         this.accumulator += (dt ?? 0) - this.current_time;
         this.current_time = dt ?? 0;
@@ -228,11 +287,35 @@ export default class Flappy {
             shit += 0.01;
 
             this.bird.update(this.get_next_input());
+            this.walls.forEach((wall) => wall.update());
+            this.walls = this.walls.filter((wall) => wall.rect.x + wall.rect.w >= 0);
 
+            if (Math.floor(this.ticks % 175) === 0)
+                this.walls.push(new Wall());
+
+            if (this._intersects(this.walls[0].rect, this.bird.rect) || this._intersects(this.walls[0].bottom_rect, this.bird.rect)) {
+                console.log('collide');
+                this.game_reset();
+            }
+
+            this.data_callback({ walls: this.walls, agent: this.bird });
             this.accumulator -= this.time_step;
+            ++this.ticks;
         }
 
         this.render();
-        this.animation_frame = window.requestAnimationFrame(this.tick.bind(this));
+
+        if (this.running)
+            this.animation_frame = window.requestAnimationFrame(this.tick.bind(this));
+    }
+
+    _intersects(rect1, rect2) {
+        const a = rect1.x < rect2.x + rect2.w;
+        const b = rect1.x + rect1.w > rect2.x;
+        const c = rect1.y < rect2.y + rect2.h;
+        const d = rect1.y + rect1.h > rect2.y;
+        const collide = a && b && c && d;
+        console.log({a,b,c,d, collide });
+        return collide;
     }
 }

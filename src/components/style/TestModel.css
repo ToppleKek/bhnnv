@@ -30,6 +30,7 @@
     width: 300px;
     display: flex;
     flex-flow: column;
+    gap: 5px;
     border-left: solid 3px grey;
     padding-left: 6px;
     text-align: left;

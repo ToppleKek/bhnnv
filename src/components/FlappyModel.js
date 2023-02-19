@@ -6,14 +6,19 @@ import Expandable from './Expandable';
 import './style/FlappyModel.css';
 import TaggedLabel from './TaggedLabel';
 
-const model = tf.sequential();
+const model = tf.sequential({
+    layers: [
+        tf.layers.dense({ units: 8, inputShape: [4], activation: 'sigmoid' }),
+        tf.layers.dense({ units: 2, activation: 'softmax' })
+    ]
+});
 
 export default class FlappyModel extends Component {
     constructor(props) {
         super(props);
 
         this.canvas_ref = createRef(null);
-        this.game = new Flappy(this.on_data);
+        this.game = new Flappy(this.on_data, this.get_input);
 
         this.state = {
             started: false,
@@ -34,6 +39,16 @@ export default class FlappyModel extends Component {
 
     on_data = (game_data) => {
         this.setState({ game_data });
+    };
+
+    get_input = (data) => {
+        let ret;
+
+        tf.tidy(() => {
+            ret = model.predict(tf.tensor2d([data])).dataSync();
+        });
+
+        return ret;
     };
 
     render() {

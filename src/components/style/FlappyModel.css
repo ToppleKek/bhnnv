@@ -1,0 +1,47 @@
+.model-wrapper {
+    display: flex;
+    flex-flow: row;
+    flex-grow: 1;
+    gap: 5px;
+}
+
+.model-app span {
+    color: var(--colour-text);
+}
+
+.model-app {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+}
+
+.model-controls {
+    color: var(--colour-text);
+    min-width: 300px;
+    width: 300px;
+    display: flex;
+    flex-flow: column;
+    border-right: solid 3px grey;
+    padding-right: 6px;
+}
+
+.model-status {
+    min-width: 300px;
+    width: 300px;
+    display: flex;
+    flex-flow: column;
+    gap: 5px;
+    border-left: solid 3px grey;
+    padding-left: 6px;
+    text-align: left;
+}
+
+.model-status span {
+    color: var(--colour-text);
+}
+
+.label-list {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 5px;
+}

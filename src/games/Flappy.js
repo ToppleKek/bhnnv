@@ -111,8 +111,9 @@ class Wall {
 }
 
 export default class Flappy {
-    constructor(data_callback) {
+    constructor(data_callback, get_input_callback) {
         this.data_callback = data_callback;
+        this.get_input_callback = get_input_callback;
     }
 
     init(canvas, time_step) {
@@ -131,17 +132,14 @@ export default class Flappy {
         canvas_h = this.canvas.height;
         this.time_step = time_step;
         this.running = true;
-        this.ticks = 0;
+        this.ticks = 1;
 
-        this.walls = [];
+        this.walls = [new Wall()];
         this.bird = new Bird();
         this.keys = [];
 
         window.addEventListener('keydown', this._on_key_down.bind(this));
         window.addEventListener('keyup', this._on_key_up.bind(this));
-
-        // TODO: Link to ENeuralNetwork
-        this.model = null;
 
         // GL SETUP
 
@@ -247,14 +245,24 @@ export default class Flappy {
 
     // TODO: Link with ENeuralNetwork
     get_next_input() {
-        let ret = false;
+        const res = this.get_input_callback([
+            this.bird.rect.y / canvas_h,
+            (this.walls[0].rect.y + this.walls[0].rect.h) / canvas_h,
+            this.walls[0].bottom_rect.y / canvas_h,
+            this.walls[0].rect.x / canvas_w
+        ]);
 
-        if (this.keys.includes(' ')) {
-            ret = true;
-            this.keys.splice(this.keys.indexOf(' '), 1);
-        }
+        console.log(res);
 
-        return ret;
+        return res[0] > res[1];
+        // let ret = false;
+
+        // if (this.keys.includes(' ')) {
+        //     ret = true;
+        //     this.keys.splice(this.keys.indexOf(' '), 1);
+        // }
+
+        // return ret;
 
         // return Math.random() < 0.04;
     }
@@ -315,7 +323,6 @@ export default class Flappy {
         const c = rect1.y < rect2.y + rect2.h;
         const d = rect1.y + rect1.h > rect2.y;
         const collide = a && b && c && d;
-        console.log({a,b,c,d, collide });
         return collide;
     }
 }

@@ -33,7 +33,8 @@ class Bird {
 
     constructor() {
         this.y_vel = 0;
-        this.rect = { x: 50, y: 0, w: 50, h: 50 };
+        this.rect = { x: 50, y: canvas_h / 2, w: 50, h: 50 };
+        this.fitness = 0;
     }
 
     render(gl) {
@@ -55,7 +56,7 @@ class Bird {
         this.y_vel += Bird.gravity;
 
         if (up)
-            this.y_vel = -6.5;
+            this.y_vel = -7.0;
 
 
         if (this.y_vel > Bird.terminal_y)
@@ -63,8 +64,12 @@ class Bird {
 
         if (this.rect.y >= canvas_h - this.rect.h)
             this.rect.y = canvas_h - this.rect.h;
-        else if (this.rect.y <= 0)
+        else if (this.rect.y <= 0) {
             this.rect.y = 0;
+            this.fitness -= 2;
+        }
+
+        ++this.fitness;
     }
 }
 
@@ -111,9 +116,10 @@ class Wall {
 }
 
 export default class Flappy {
-    constructor(data_callback, get_input_callback) {
+    constructor(data_callback, get_input_callback, game_end_callback) {
         this.data_callback = data_callback;
         this.get_input_callback = get_input_callback;
+        this.game_end_callback = game_end_callback;
     }
 
     init(canvas, time_step) {
@@ -183,12 +189,17 @@ export default class Flappy {
     }
 
     game_reset() {
-        // this.walls = [];
-        // this.bird = new Bird();
+        const fitness = this.bird.fitness;
+        this.walls = [new Wall()];
+        this.bird = new Bird();
+        this.ticks = 1;
+        this.accumulator = 0;
+        this.current_time = 0;
 
         // window.cancelAnimationFrame(this.animation_frame);
-        this.running = false;
+        // this.running = false;
         console.log('reset');
+        this.game_end_callback(fitness);
     }
 
     _on_key_up(e) {
@@ -243,16 +254,14 @@ export default class Flappy {
         this.time_step = time_step;
     }
 
-    // TODO: Link with ENeuralNetwork
     get_next_input() {
         const res = this.get_input_callback([
             this.bird.rect.y / canvas_h,
             (this.walls[0].rect.y + this.walls[0].rect.h) / canvas_h,
             this.walls[0].bottom_rect.y / canvas_h,
-            this.walls[0].rect.x / canvas_w
+            this.walls[0].rect.x / canvas_w,
+            this.bird.y_vel / Bird.terminal_y
         ]);
-
-        console.log(res);
 
         return res[0] > res[1];
         // let ret = false;
@@ -289,11 +298,6 @@ export default class Flappy {
         this.current_time = dt ?? 0;
 
         while ((this.accumulator - this.time_step) >= 0) {
-            this.r = Math.abs(Math.sin(shit));
-            this.g = Math.abs(Math.sin(shit));
-            this.b = Math.abs(Math.sin(shit));
-            shit += 0.01;
-
             this.bird.update(this.get_next_input());
             this.walls.forEach((wall) => wall.update());
             this.walls = this.walls.filter((wall) => wall.rect.x + wall.rect.w >= 0);
@@ -302,13 +306,21 @@ export default class Flappy {
                 this.walls.push(new Wall());
 
             if (this._intersects(this.walls[0].rect, this.bird.rect) || this._intersects(this.walls[0].bottom_rect, this.bird.rect)) {
-                console.log('collide');
+                console.log('collide', this.bird.fitness);
                 this.game_reset();
+                break;
+            }
+
+            if (this.bird.rect.y === canvas_h - this.bird.rect.h) {
+                console.log('bottom', this.bird.fitness);
+                this.game_reset();
+                break;
             }
 
             this.data_callback({ walls: this.walls, agent: this.bird });
             this.accumulator -= this.time_step;
             ++this.ticks;
+            ++this.bird.fitness;
         }
 
         this.render();

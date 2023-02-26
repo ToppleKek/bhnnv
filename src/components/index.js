@@ -3,6 +3,7 @@ export {default as Checkbox} from './Checkbox';
 export {default as LineEdit} from './LineEdit';
 export {default as InlineButton} from './InlineButton';
 export {default as Selector} from './Selector';
+export {default as Slider} from './Slider';
 export {default as Folder} from './Folder';
 export {default as Fold} from './Fold';
 export {default as FlappyModel} from './FlappyModel';

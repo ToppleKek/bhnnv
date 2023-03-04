@@ -13,6 +13,7 @@
     display: flex;
     flex: 1;
     justify-content: center;
+    position: relative;
 }
 
 .model-controls {
@@ -44,4 +45,20 @@
     display: flex;
     flex-flow: column nowrap;
     gap: 5px;
+}
+
+.fast-forward-banner {
+    z-index: 2;
+    position: absolute;
+    width: 100%;
+    padding: 1em;
+    top: 10%;
+    color: var(--colour-text);
+    background-color: var(--colour-primary);
+    border-radius: 5px;
+}
+
+.dimmed {
+    z-index: 1;
+    filter: brightness(25%);
 }

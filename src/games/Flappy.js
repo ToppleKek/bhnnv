@@ -4,12 +4,9 @@ uniform vec2 u_resolution;
 
 void main() {
     vec2 zeroToOne = a_vertexpos / u_resolution;
-
-    // convert from 0->1 to 0->2
     vec2 zeroToTwo = zeroToOne * 2.0;
-
-    // convert from 0->2 to -1->+1 (clip space)
     vec2 clipSpace = zeroToTwo - 1.0;
+
     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
 }
 `;
@@ -28,7 +25,7 @@ let canvas_w = 0;
 let canvas_h = 0;
 
 class Bird {
-    static gravity = 0.55;
+    static gravity = 0.58;
     static terminal_y = 10;
 
     constructor() {
@@ -56,17 +53,15 @@ class Bird {
         this.y_vel += Bird.gravity;
 
         if (up)
-            this.y_vel = -7.0;
-
+            this.y_vel = -6.8;
 
         if (this.y_vel > Bird.terminal_y)
             this.y_vel = Bird.terminal_y;
 
         if (this.rect.y >= canvas_h - this.rect.h)
             this.rect.y = canvas_h - this.rect.h;
-        else if (this.rect.y <= 0) {
-            this.rect.y = 0;
-            this.fitness -= 2;
+        else if (this.rect.y + this.rect.h <= 0) {
+            this.rect.y = -this.rect.h;
         }
 
         ++this.fitness;
@@ -110,7 +105,7 @@ class Wall {
     }
 
     update() {
-        this.rect.x -= 2;
+        this.rect.x -= 3;
         this.bottom_rect.x = this.rect.x;
     }
 }
@@ -120,6 +115,9 @@ export default class Flappy {
         this.data_callback = data_callback;
         this.get_input_callback = get_input_callback;
         this.game_end_callback = game_end_callback;
+        this.last_output = [];
+        this.last_input = [];
+        this.fast_forward = false;
     }
 
     init(canvas, time_step) {
@@ -198,7 +196,6 @@ export default class Flappy {
 
         // window.cancelAnimationFrame(this.animation_frame);
         // this.running = false;
-        console.log('reset');
         this.game_end_callback(fitness);
     }
 
@@ -254,14 +251,26 @@ export default class Flappy {
         this.time_step = time_step;
     }
 
+    _closest_wall() {
+        if (this.walls[0].rect.x + this.walls[0].rect.w < this.bird.x) {
+            console.log('passed wall');
+            return this.walls[1];
+        }
+
+        return this.walls[0];
+    }
+
     get_next_input() {
-        const res = this.get_input_callback([
+        this.last_input = [
             this.bird.rect.y / canvas_h,
-            (this.walls[0].rect.y + this.walls[0].rect.h) / canvas_h,
-            this.walls[0].bottom_rect.y / canvas_h,
-            this.walls[0].rect.x / canvas_w,
+            (this._closest_wall().rect.y + this._closest_wall().rect.h) / canvas_h,
+            this._closest_wall().bottom_rect.y / canvas_h,
+            this._closest_wall().rect.x / canvas_w,
             this.bird.y_vel / Bird.terminal_y
-        ]);
+        ];
+
+        const res = this.get_input_callback(this.last_input);
+        this.last_output = res;
 
         return res[0] > res[1];
         // let ret = false;
@@ -277,7 +286,7 @@ export default class Flappy {
     }
 
     render() {
-        if (!this.canvas)
+        if (!this.canvas || this.fast_forward)
             return;
 
         this.gl.clearColor(this.r, this.g, this.b, 1);
@@ -287,7 +296,7 @@ export default class Flappy {
         this.walls.forEach((wall) => wall.render(this.gl));
     }
 
-    tick(dt) {
+    do_frame(dt) {
         if (!this.canvas)
             return;
 
@@ -297,36 +306,50 @@ export default class Flappy {
         this.accumulator += (dt ?? 0) - this.current_time;
         this.current_time = dt ?? 0;
 
-        while ((this.accumulator - this.time_step) >= 0) {
-            this.bird.update(this.get_next_input());
-            this.walls.forEach((wall) => wall.update());
-            this.walls = this.walls.filter((wall) => wall.rect.x + wall.rect.w >= 0);
-
-            if (Math.floor(this.ticks % 175) === 0)
-                this.walls.push(new Wall());
-
-            if (this._intersects(this.walls[0].rect, this.bird.rect) || this._intersects(this.walls[0].bottom_rect, this.bird.rect)) {
-                console.log('collide', this.bird.fitness);
-                this.game_reset();
-                break;
+        if (!this.fast_forward) {
+            while ((this.accumulator - this.time_step) >= 0) {
+                if (!this.tick())
+                    break;
+                this.accumulator -= this.time_step;
             }
 
-            if (this.bird.rect.y === canvas_h - this.bird.rect.h) {
-                console.log('bottom', this.bird.fitness);
-                this.game_reset();
-                break;
-            }
-
-            this.data_callback({ walls: this.walls, agent: this.bird });
-            this.accumulator -= this.time_step;
-            ++this.ticks;
-            ++this.bird.fitness;
+            this.render();
         }
 
-        this.render();
+        for (let i = 0; i < 50_000 && this.fast_forward; ++i) {
+            if (!this.tick())
+                break;
+        }
 
         if (this.running)
-            this.animation_frame = window.requestAnimationFrame(this.tick.bind(this));
+            this.animation_frame = window.requestAnimationFrame(this.do_frame.bind(this));
+    }
+
+    tick() {
+        this.walls.forEach((wall) => wall.update());
+        const n_walls = this.walls.length;
+        this.walls = this.walls.filter((wall) => wall.rect.x + wall.rect.w >= 0);
+
+        this.bird.fitness += (n_walls - this.walls.length) * 500;
+        this.bird.update(this.get_next_input());
+
+        if (Math.floor(this.ticks % 160) === 0)
+            this.walls.push(new Wall());
+
+        if (this._intersects(this.walls[0].rect, this.bird.rect) || this._intersects(this.walls[0].bottom_rect, this.bird.rect)) {
+            this.game_reset();
+            return false;
+        }
+
+        if (this.bird.rect.y === canvas_h - this.bird.rect.h || this.bird.rect.y + this.bird.rect.h <= 0) {
+            this.game_reset();
+            return false;
+        }
+
+        this.data_callback({ walls: this.walls, agent: this.bird });
+        ++this.bird.fitness;
+        ++this.ticks;
+        return true;
     }
 
     _intersects(rect1, rect2) {

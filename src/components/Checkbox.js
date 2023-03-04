@@ -3,7 +3,6 @@ import './style/Checkbox.css';
 
 export default class Checkbox extends Component {
     on_change = (event) => {
-        console.dir(event);
         this.props.onChange(event.target.checked);
     };
 

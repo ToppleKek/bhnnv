@@ -18,7 +18,6 @@ export default function Expandable({ title, children }) {
                     {children}
                 </div>
             }
-
         </div>
     );
 }

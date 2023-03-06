@@ -6,14 +6,14 @@ import Expandable from './Expandable';
 import './style/FlappyModel.css';
 import TaggedLabel from './TaggedLabel';
 
+tf.setBackend('cpu');
+
 const model = tf.sequential({
     layers: [
         tf.layers.dense({ units: 12, inputShape: [5], activation: 'sigmoid' }),
         tf.layers.dense({ units: 2, activation: 'softmax' })
     ],
 });
-
-tf.setBackend('cpu');
 
 const NUM_AGENTS = 400;
 
@@ -38,7 +38,8 @@ export default class FlappyModel extends Component {
             total_agent_count: NUM_AGENTS,
             current_agent: 0,
             fast_forward: false,
-            current_generation: 0
+            current_generation: 0,
+            top_weights: []
         };
     }
 
@@ -117,9 +118,22 @@ export default class FlappyModel extends Component {
             }
 
             this.current_weights.forEach((wf) => wf.weights.forEach((w) => w.dispose()));
+
+            // Get top weights to update top all time weights
+            this.current_weights.sort((a, b) => b.fitness - a.fitness);
+            const top_weights = this.current_weights.splice(0, 5).map((w) => Object.assign(w, { generation: this.state.current_generation }));
+
             console.log({new_weights});
             this.current_weights = new_weights;
-            this.setState((old_state) => ({ current_agent: 0, current_generation: old_state.current_generation + 1 }));
+            this.setState((old_state) => {
+                const new_top_weights = old_state.top_weights.concat(top_weights);
+                new_top_weights.sort((a, b) => b.fitness - a.fitness);
+                return {
+                    current_agent: 0,
+                    current_generation: old_state.current_generation + 1,
+                    top_weights: new_top_weights.splice(0, 5)
+                };
+            });
         } else {
             model.setWeights(this.current_weights[this.state.current_agent + 1].weights);
             this.setState((old_state) => ({ current_agent: old_state.current_agent + 1 }));
@@ -146,6 +160,9 @@ export default class FlappyModel extends Component {
 
     render() {
         const wall_data = this.state.game_data === null ? null : this.state.game_data.walls.map((wall) => <span>x={wall.rect.x} y={wall.rect.y}</span>);
+        const sorted_weights = this.current_weights.slice();
+        sorted_weights.sort((a, b) => b.fitness - a.fitness);
+
         return (
             <div className='model-wrapper'>
                 <div className='model-controls'>
@@ -200,6 +217,20 @@ export default class FlappyModel extends Component {
                         <TaggedLabel tag='Outputs'>
                             <div className='label-list'>
                                 {this.game?.last_output.toString().replace(',', '\n')}
+                            </div>
+                        </TaggedLabel>
+                    </Expandable>
+                    <Expandable title='Progress'>
+                        <TaggedLabel tag='Top Genomes'>
+                            (this generation)
+                            <div className='label-list'>
+                                {sorted_weights.splice(0, 5).map((w) => <span>{w.fitness.toString()}</span>)}
+                            </div>
+                        </TaggedLabel>
+                        <TaggedLabel tag='Top Genomes'>
+                            (whole simulation)
+                            <div className='label-list'>
+                                {this.state.top_weights.map((w) => <span>{w.fitness.toString()} - Gen: {w.generation}</span>)}
                             </div>
                         </TaggedLabel>
                     </Expandable>

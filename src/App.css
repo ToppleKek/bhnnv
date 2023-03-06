@@ -130,3 +130,16 @@ body {
 html, body {
     overflow: hidden
 }
+
+*::-webkit-scrollbar {
+    width: 12px;
+}
+
+*::-webkit-scrollbar-button {
+    display: none;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: grey;
+    border-radius: 5px;
+}

@@ -230,7 +230,7 @@ export default class FlappyModel extends Component {
                         <TaggedLabel tag='Top Genomes'>
                             (whole simulation)
                             <div className='label-list'>
-                                {this.state.top_weights.map((w) => <span>{w.fitness.toString()} - Gen: {w.generation}</span>)}
+                                {this.state.top_weights.map((w) => <span>{w.fitness.toString()} - Generation {w.generation}</span>)}
                             </div>
                         </TaggedLabel>
                     </Expandable>

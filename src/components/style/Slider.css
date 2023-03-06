@@ -1,0 +1,6 @@
+.slider-wrapper {
+    background-color: var(--colour-primary);
+    border-radius: 5px;
+    width: 50%;
+    height: 2em;
+}

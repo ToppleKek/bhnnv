@@ -167,7 +167,7 @@ export default class FlappyModel extends Component {
             <div className='model-wrapper'>
                 <div className='model-controls'>
                     Game timestep
-                    <Slider min={0.01} max={100.0} onInput={this.on_timestep_change} />
+                    <Slider min={0.1} max={100.0} value={this.state.game_timestep} onInput={this.on_timestep_change} />
                     <Checkbox onChange={this.on_fast_forward_change} checked={false} name={'Fast forward'}></Checkbox>
                 </div>
                 <div className='model-app'>

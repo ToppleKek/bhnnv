@@ -6,31 +6,37 @@ export default class Slider extends Component {
         super(props);
 
         this.state = {
-            value: props.value
+            value: props.value,
+            down: false
         };
     }
 
-    on_input = (e) => {
-        this.props.onInput(e.target.value);
-    };
-
-    on_mouse_down = (e) => {
-        const r = e.target.getBoundingClientRect();
-        const x = e.clientX - r.left;
-        const value = (x / r.width) * this.props.max;
-        console.log(x, (x / r.width), value);
+    update_slider_value(client_x, rect) {
+        const x = client_x - rect.left;
+        const value = (x / rect.width) * (this.props.max - this.props.min) + this.props.min;
         this.props.onInput(value);
         this.setState({ value });
+    }
+
+    on_mouse_down = (e) => {
+        this.update_slider_value(e.clientX, e.target.getBoundingClientRect());
+        this.setState({ down: true });
+    };
+
+    on_mouse_up = (e) => {
+        this.setState({ down: false });
+    };
+
+    on_move = (e) => {
+        if (this.state.down)
+            this.update_slider_value(e.clientX, e.target.getBoundingClientRect());
     };
 
     render() {
         return (
-            <div className='slider-wrapper' onMouseDown={this.on_mouse_down} on>
-                <div className='slider-body'>
-
-                </div>
+            <div className='slider-wrapper' onMouseMove={this.on_move} onMouseUp={this.on_mouse_up} onMouseDown={this.on_mouse_down} onMouseLeave={this.on_mouse_up} style={{background: `linear-gradient(to right, var(--colour-interactable) ${this.state.value / (this.props.max - this.props.min) * 100}%, var(--colour-grid_border) 1px)`}}>
+                <div className='slider-body'></div>
                 <span className='slider-text'>{this.state.value}</span>
-                {/* <input className='slider-body' type='range' min={this.props.min} max={this.props.max} onInput={this.on_input} /> */}
             </div>
         );
     }

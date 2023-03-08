@@ -3,6 +3,7 @@
     width: auto;
     height: 2em;
     position: relative;
+    cursor: pointer;
 }
 
 .slider-body {

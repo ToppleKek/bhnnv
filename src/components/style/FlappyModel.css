@@ -12,6 +12,7 @@
 .model-app {
     display: flex;
     flex: 1;
+    flex-flow: column nowrap;
     justify-content: center;
     position: relative;
 }
@@ -62,4 +63,13 @@
 .dimmed {
     z-index: 1;
     filter: brightness(25%);
+}
+
+.topology-overlay {
+    position: absolute;
+    top: 0;
+}
+
+.game-canvas {
+    height: 100%;
 }

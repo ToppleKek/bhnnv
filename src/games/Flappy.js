@@ -60,9 +60,8 @@ class Bird {
 
         if (this.rect.y >= canvas_h - this.rect.h)
             this.rect.y = canvas_h - this.rect.h;
-        else if (this.rect.y + this.rect.h <= 0) {
+        else if (this.rect.y + this.rect.h <= 0)
             this.rect.y = -this.rect.h;
-        }
 
         ++this.fitness;
     }
@@ -111,10 +110,11 @@ class Wall {
 }
 
 export default class Flappy {
-    constructor(data_callback, get_input_callback, game_end_callback) {
+    constructor(data_callback, get_input_callback, game_end_callback, topology_data_callback) {
         this.data_callback = data_callback;
         this.get_input_callback = get_input_callback;
         this.game_end_callback = game_end_callback;
+        this.topology_data_callback = topology_data_callback;
         this.last_output = [];
         this.last_input = [];
         this.fast_forward = false;
@@ -332,6 +332,7 @@ export default class Flappy {
 
         this.bird.fitness += (n_walls - this.walls.length) * 500;
         this.bird.update(this.get_next_input());
+        this.topology_data_callback({ inputs: this.last_input, outputs: this.last_output });
 
         if (Math.floor(this.ticks % 160) === 0)
             this.walls.push(new Wall());
@@ -353,11 +354,9 @@ export default class Flappy {
     }
 
     _intersects(rect1, rect2) {
-        const a = rect1.x < rect2.x + rect2.w;
-        const b = rect1.x + rect1.w > rect2.x;
-        const c = rect1.y < rect2.y + rect2.h;
-        const d = rect1.y + rect1.h > rect2.y;
-        const collide = a && b && c && d;
-        return collide;
+        return (rect1.x < rect2.x + rect2.w) &&
+               (rect1.x + rect1.w > rect2.x) &&
+               (rect1.y < rect2.y + rect2.h) &&
+               (rect1.y + rect1.h > rect2.y);
     }
 }

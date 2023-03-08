@@ -2,6 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { Component, createRef } from 'react';
 import { Button, Checkbox, Slider } from '.';
 import Flappy from '../games/Flappy';
+import Topology from '../games/Topology';
 import Expandable from './Expandable';
 import './style/FlappyModel.css';
 import TaggedLabel from './TaggedLabel';
@@ -22,7 +23,9 @@ export default class FlappyModel extends Component {
         super(props);
 
         this.canvas_ref = createRef(null);
-        this.game = new Flappy(this.on_data, this.get_input, this.on_game_end);
+        this.topology_canvas_ref = createRef(null);
+        this.game = new Flappy(this.on_data, this.get_input, this.on_game_end, this.on_topology_data);
+        this.topology_renderer = new Topology();
         this.current_weights = [];
 
         for (let i = 0; i < NUM_AGENTS; ++i)
@@ -45,6 +48,7 @@ export default class FlappyModel extends Component {
 
     componentDidMount() {
         this.game.init(this.canvas_ref.current, this.state.game_timestep);
+        this.topology_renderer.init(this.topology_canvas_ref.current, this.current_weights[this.state.current_agent].weights);
         this.game.do_frame();
     }
 
@@ -54,6 +58,14 @@ export default class FlappyModel extends Component {
 
     on_data = (game_data) => {
         this.setState({ game_data });
+    };
+
+    on_topology_data = (data) => {
+        this.topology_renderer.set_inputs(data.inputs);
+        this.topology_renderer.set_outputs(data.outputs);
+
+        if (!this.state.fast_forward)
+            this.topology_renderer.render();
     };
 
     _gaussian_random() {
@@ -136,6 +148,7 @@ export default class FlappyModel extends Component {
             });
         } else {
             model.setWeights(this.current_weights[this.state.current_agent + 1].weights);
+            this.topology_renderer.set_weights(this.current_weights[this.state.current_agent + 1].weights);
             this.setState((old_state) => ({ current_agent: old_state.current_agent + 1 }));
         }
     };
@@ -176,7 +189,8 @@ export default class FlappyModel extends Component {
                         <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given mutation for 50,000 ticks.)</span>
                     </div>
                     }
-                    <canvas className={this.state.fast_forward ? 'dimmed' : ''} width={800} height={600} ref={this.canvas_ref} />
+                    <canvas className={`game-canvas ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.canvas_ref} />
+                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.topology_canvas_ref} />
                 </div>
                 <div className='model-status'>
                     <Expandable title='Memory'>

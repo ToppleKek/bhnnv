@@ -40,8 +40,9 @@ export default class FlappyModel extends Component {
             game_data: null,
             total_agent_count: NUM_AGENTS,
             current_agent: 0,
-            fast_forward: false,
             current_generation: 0,
+            fast_forward: false,
+            show_topology: false,
             top_weights: []
         };
     }
@@ -64,7 +65,7 @@ export default class FlappyModel extends Component {
         this.topology_renderer.inputs = data.inputs;
         this.topology_renderer.outputs = data.outputs;
 
-        if (!this.state.fast_forward)
+        if (!this.state.fast_forward && this.state.show_topology)
             this.topology_renderer.render();
     };
 
@@ -171,6 +172,10 @@ export default class FlappyModel extends Component {
         this.setState({ fast_forward: checked });
     };
 
+    on_topology_visibility_change = (checked) => {
+        this.setState({ show_topology: checked });
+    };
+
     render() {
         const wall_data = this.state.game_data === null ? null : this.state.game_data.walls.map((wall) => <span>x={wall.rect.x} y={wall.rect.y}</span>);
         const sorted_weights = this.current_weights.slice();
@@ -180,7 +185,8 @@ export default class FlappyModel extends Component {
             <div className='model-wrapper'>
                 <div className='model-controls'>
                     <Slider min={0.1} max={100.0} value={this.state.game_timestep} label='Timestep' onInput={this.on_timestep_change} />
-                    <Checkbox onChange={this.on_fast_forward_change} checked={false} name={'Fast forward'}></Checkbox>
+                    <Checkbox onChange={this.on_fast_forward_change} checked={false} label='Fast forward'></Checkbox>
+                    <Checkbox onChange={this.on_topology_visibility_change} checked={false} label='Show Topology Graph'></Checkbox>
                 </div>
                 <div className='model-app'>
                     {this.state.fast_forward &&
@@ -190,7 +196,7 @@ export default class FlappyModel extends Component {
                     </div>
                     }
                     <canvas className={`game-canvas ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.canvas_ref} />
-                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.topology_canvas_ref} />
+                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} style={{ display: this.state.show_topology ? '' : 'none'}} width={800} height={600} ref={this.topology_canvas_ref} />
                 </div>
                 <div className='model-status'>
                     <Expandable title='Memory'>

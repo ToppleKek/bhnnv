@@ -61,8 +61,8 @@ export default class FlappyModel extends Component {
     };
 
     on_topology_data = (data) => {
-        this.topology_renderer.set_inputs(data.inputs);
-        this.topology_renderer.set_outputs(data.outputs);
+        this.topology_renderer.inputs = data.inputs;
+        this.topology_renderer.outputs = data.outputs;
 
         if (!this.state.fast_forward)
             this.topology_renderer.render();
@@ -148,7 +148,7 @@ export default class FlappyModel extends Component {
             });
         } else {
             model.setWeights(this.current_weights[this.state.current_agent + 1].weights);
-            this.topology_renderer.set_weights(this.current_weights[this.state.current_agent + 1].weights);
+            this.topology_renderer.weights = this.current_weights[this.state.current_agent + 1].weights[1].dataSync();
             this.setState((old_state) => ({ current_agent: old_state.current_agent + 1 }));
         }
     };

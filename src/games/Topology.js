@@ -9,18 +9,6 @@ export default class Topology {
         this.inputs = [];
     }
 
-    set_weights(weights) {
-        this.weights = weights[1].dataSync();
-    }
-
-    set_inputs(inputs) {
-        this.inputs = inputs;
-    }
-
-    set_outputs(outputs) {
-        this.outputs = outputs;
-    }
-
     render() {
         if (!this.canvas)
             return;

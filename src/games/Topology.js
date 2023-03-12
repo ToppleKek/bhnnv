@@ -16,14 +16,14 @@ export default class Topology {
         const input_x = 100;
         const hidden_x = 300;
         const output_x = 500;
-        const spacing = 45;
+        const spacing = 40;
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.strokeStyle = 'white';
         this.ctx.fillStyle = 'green';
         for (let i = 0; i < this.inputs.length; ++i) {
             this.ctx.beginPath();
-            this.ctx.arc(input_x, (i + 1) * spacing, 20, 0, 2 * Math.PI);
+            this.ctx.arc(input_x, (i + 1) * spacing, 15, 0, 2 * Math.PI);
 
             if (this.inputs[i] >= 0.5)
                 this.ctx.fill();
@@ -38,7 +38,7 @@ export default class Topology {
 
         for (let i = 0; i < this.weights.length; ++i) {
             this.ctx.beginPath();
-            this.ctx.arc(hidden_x, (i + 1) * spacing, 20, 0, 2 * Math.PI);
+            this.ctx.arc(hidden_x, (i + 1) * spacing, 15, 0, 2 * Math.PI);
 
             if (this.weights[i] >= 0.5)
                 this.ctx.fill();
@@ -53,7 +53,7 @@ export default class Topology {
 
         for (let i = 0; i < this.outputs.length; ++i) {
             this.ctx.beginPath();
-            this.ctx.arc(output_x, (i + 1) * spacing, 20, 0, 2 * Math.PI);
+            this.ctx.arc(output_x, (i + 1) * spacing, 15, 0, 2 * Math.PI);
 
             if (this.outputs[i] >= 0.5)
                 this.ctx.fill();

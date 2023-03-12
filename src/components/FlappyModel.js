@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import { Component, createRef } from 'react';
-import { Button, Checkbox, Slider } from '.';
+import { Button, Checkbox, InlineButton, Slider } from '.';
 import Flappy from '../games/Flappy';
 import Topology from '../games/Topology';
 import Expandable from './Expandable';
@@ -9,7 +9,7 @@ import TaggedLabel from './TaggedLabel';
 
 tf.setBackend('cpu');
 
-const model = tf.sequential({
+let model = tf.sequential({
     layers: [
         tf.layers.dense({ units: 12, inputShape: [5], activation: 'sigmoid' }),
         tf.layers.dense({ units: 2, activation: 'softmax' })
@@ -28,11 +28,6 @@ export default class FlappyModel extends Component {
         this.topology_renderer = new Topology();
         this.current_weights = [];
 
-        for (let i = 0; i < NUM_AGENTS; ++i)
-            this.current_weights.push({ weights: model.getWeights().map((w) => tf.randomStandardNormal(w.shape)), fitness: 0 });
-
-        model.setWeights(this.current_weights[0].weights);
-
         this.state = {
             started: false,
             game_timestep: 16,
@@ -43,12 +38,17 @@ export default class FlappyModel extends Component {
             fast_forward: false,
             show_topology: false,
             paused: false,
+            mutation_rate: 0.1,
+            hidden_units: 12,
+            staged_changes: {},
             top_weights: []
         };
     }
 
     componentDidMount() {
-        this.game.init(this.canvas_ref.current, this.state.game_timestep);
+        this.init_random_weights();
+
+        this.game.init(this.canvas_ref.current);
         this.topology_renderer.init(this.topology_canvas_ref.current, this.current_weights[this.state.current_agent].weights);
         this.game.do_frame();
     }
@@ -64,6 +64,27 @@ export default class FlappyModel extends Component {
 
     componentWillUnmount() {
         this.game.delete();
+        for (const phenotype of this.current_weights) {
+            for (const t of phenotype.weights)
+                t.dispose();
+        }
+    }
+
+    init_random_weights() {
+        if (this.current_weights.length !== 0) {
+            for (const phenotype of this.current_weights) {
+                for (const t of phenotype.weights)
+                    t.dispose();
+            }
+        }
+
+        this.current_weights = [];
+
+        for (let i = 0; i < this.state.total_agent_count; ++i)
+            this.current_weights.push({ weights: model.getWeights().map((w) => tf.randomStandardNormal(w.shape)), fitness: 0 });
+
+        console.dir(this.current_weights);
+        model.setWeights(this.current_weights[0].weights);
     }
 
     on_data = (game_data) => {
@@ -93,7 +114,6 @@ export default class FlappyModel extends Component {
         if (this.state.current_agent === this.state.total_agent_count - 1) {
             const sum = this.current_weights.reduce((prev, curr) => ({ fitness: prev.fitness + curr.fitness })).fitness;
             const normalized_fitnesses = this.current_weights.map((w) => ({ weights: w.weights, fitness: w.fitness / sum }));
-            console.log({ normalized_fitnesses });
             let new_weights = [];
 
             const copy_and_mutate = (weights) => {
@@ -103,7 +123,7 @@ export default class FlappyModel extends Component {
                     const tensor_values = weight_copy[i].dataSync().slice();
                     tf.tidy(() => {
                         for (let k = 0; k < tensor_values.length; ++k) {
-                            if (Math.random() < 0.1) {
+                            if (Math.random() < this.state.mutation_rate) {
                                 const mutation = this._gaussian_random();
                                 tensor_values[k] += mutation;
                             }
@@ -136,7 +156,6 @@ export default class FlappyModel extends Component {
             this.current_weights.sort((a, b) => b.fitness - a.fitness);
             const top_weights = this.current_weights.splice(0, 5).map((w) => Object.assign(w, { generation: this.state.current_generation }));
 
-            console.log({ new_weights });
             this.current_weights = new_weights;
             this.setState((old_state) => {
                 const new_top_weights = old_state.top_weights.concat(top_weights);
@@ -164,7 +183,10 @@ export default class FlappyModel extends Component {
     };
 
     on_timestep_change = (value) => {
-        this.game.set_time_step(Number.parseFloat(value));
+        this.game.time_step = value;
+        // STUPID HACK: Sliders rely on props, but using game.time_step as the slider prop makes the slider
+        // update slower when the timestep increases because of obvious reasons. So we hold separate state...
+        this.setState({ game_timestep: this.game.time_step });
     };
 
     on_fast_forward_change = (checked) => {
@@ -173,6 +195,38 @@ export default class FlappyModel extends Component {
 
     on_topology_visibility_change = (checked) => {
         this.setState({ show_topology: checked });
+    };
+
+    on_mutation_rate_change = (value) => {
+        this.setState({ mutation_rate: value });
+    };
+
+    on_total_agent_change = (value) => {
+        this.setState((old_state) => {
+            const new_changes = {
+                ...old_state.staged_changes
+            };
+
+            new_changes.total_agent_count = value;
+
+            return {
+                staged_changes: new_changes
+            };
+        });
+    };
+
+    on_hidden_unit_change = (value) => {
+        this.setState((old_state) => {
+            const new_changes = {
+                ...old_state.staged_changes
+            };
+
+            new_changes.hidden_units = value;
+
+            return {
+                staged_changes: new_changes
+            };
+        });
     };
 
     save_weights = () => {
@@ -204,7 +258,6 @@ export default class FlappyModel extends Component {
 
             reader.onload = () => {
                 const data = JSON.parse(reader.result);
-                // TODO: when we change the number of agents, this might change a bit as well
                 const new_current_weights = data.weights.map((cw) => ({ fitness: 0, weights: cw.map((w) => new tf.tensor(w.data, w.shape))}));
 
                 for (const phenotype of this.current_weights) {
@@ -231,6 +284,32 @@ export default class FlappyModel extends Component {
         this.game.step();
     };
 
+    apply_staged_changes = () => {
+        this.setState((old_state) => ({
+            total_agent_count: old_state.staged_changes.total_agent_count ?? old_state.total_agent_count,
+            hidden_units: old_state.staged_changes.hidden_units ?? old_state.hidden_units,
+            staged_changes: {},
+            current_agent: 0,
+            current_generation: 0,
+            top_weights: []
+        }), () => {
+            model.dispose();
+            model = tf.sequential({
+                layers: [
+                    tf.layers.dense({ units: this.state.hidden_units, inputShape: [5], activation: 'sigmoid' }),
+                    tf.layers.dense({ units: 2, activation: 'softmax' })
+                ],
+            });
+
+            this.init_random_weights();
+            this.game.game_reset();
+        });
+    };
+
+    discard_staged_changes = () => {
+        this.setState({ staged_changes: {} });
+    };
+
     render() {
         const wall_data = this.state.game_data === null ? null : this.state.game_data.walls.map((wall) => <span>x={wall.rect.x} y={wall.rect.y}</span>);
         const sorted_weights = this.current_weights.slice();
@@ -248,16 +327,26 @@ export default class FlappyModel extends Component {
                     <Checkbox onChange={this.on_topology_visibility_change} checked={false} label='Show Topology Graph' />
                     <Button role='normal' value='Save weights' onClick={this.save_weights} />
                     <Button role='normal' value='Load weights' onClick={this.load_weights} />
+                    <Slider min={0.01} max={1.0} value={this.state.mutation_rate} label='Mutation rate' onInput={this.on_mutation_rate_change} />
+                    <Slider min={50} max={1000} value={this.state.staged_changes?.total_agent_count || this.state.total_agent_count} label='Population' onInput={this.on_total_agent_change} integer={true} />
+                    <Slider min={4} max={20} value={this.state.staged_changes?.hidden_units || this.state.hidden_units} label='Hidden nodes' onInput={this.on_hidden_unit_change} integer={true} />
                 </div>
                 <div className='model-app'>
                     {this.state.fast_forward &&
                         <div className='fast-forward-banner'>
                             <h1>Fast-forward in progress</h1>
-                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given mutation for 10,000 ticks.)</span>
+                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given phenotype for 10,000 ticks.)</span>
+                        </div>
+                    }
+                    {Object.keys(this.state.staged_changes).length === 0 ? null :
+                        <div className='staged-changes-banner'>
+                            <span>Some changes require a reset of the model</span>
+                            <InlineButton value='Apply and Reset' onClick={this.apply_staged_changes} />
+                            <InlineButton value='Discard' onClick={this.discard_staged_changes} />
                         </div>
                     }
                     <canvas className={`game-canvas ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.canvas_ref} />
-                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} style={{ display: this.state.show_topology ? '' : 'none' }} width={800} height={600} ref={this.topology_canvas_ref} />
+                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} style={{ display: this.state.show_topology ? '' : 'none' }} width={800} height={1000} ref={this.topology_canvas_ref} />
                 </div>
                 <div className='model-status'>
                     <Expandable title='Memory'>
@@ -301,13 +390,13 @@ export default class FlappyModel extends Component {
                         </TaggedLabel>
                     </Expandable>
                     <Expandable title='Progress'>
-                        <TaggedLabel tag='Top Genomes'>
+                        <TaggedLabel tag='Top Phenotypes'>
                             (this generation)
                             <div className='label-list'>
                                 {sorted_weights.splice(0, 5).map((w) => <span>{w.fitness.toString()}</span>)}
                             </div>
                         </TaggedLabel>
-                        <TaggedLabel tag='Top Genomes'>
+                        <TaggedLabel tag='Top Phenotypes'>
                             (whole simulation)
                             <div className='label-list'>
                                 {this.state.top_weights.map((w) => <span>{w.fitness.toString()} - Generation {w.generation}</span>)}

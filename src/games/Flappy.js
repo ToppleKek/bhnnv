@@ -119,9 +119,10 @@ export default class Flappy {
         this.last_input = [];
         this.fast_forward = false;
         this.paused = false;
+        this.time_step = 16;
     }
 
-    init(canvas, time_step) {
+    init(canvas) {
         console.log('trying init');
         if (this.initialized)
             return;
@@ -135,7 +136,6 @@ export default class Flappy {
         this.canvas = canvas;
         canvas_w = this.canvas.width;
         canvas_h = this.canvas.height;
-        this.time_step = time_step;
         this.running = true;
         this.ticks = 1;
 
@@ -246,10 +246,6 @@ export default class Flappy {
         }
 
         return shader;
-    }
-
-    set_time_step(time_step) {
-        this.time_step = time_step;
     }
 
     _closest_wall() {

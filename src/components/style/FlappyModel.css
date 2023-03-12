@@ -3,6 +3,7 @@
     flex-flow: row;
     flex-grow: 1;
     gap: 5px;
+    overflow: clip;
 }
 
 .model-app span {
@@ -87,4 +88,28 @@
     font-family: 'Font Awesome 6 Free';
     font-weight: 900;
     display: inline-block;
+}
+
+@keyframes grow {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+}
+
+.staged-changes-banner {
+    animation: grow 0.15s ease-in-out;
+    display: flex;
+    gap: 10px;
+    flex-flow: row nowrap;
+    z-index: 2;
+    position: absolute;
+    width: auto;
+    padding: 1em;
+    margin: 10px;
+    left: 0;
+    bottom: 0;
+    color: var(--colour-text);
+    background-color: var(--colour-primary);
+    border-radius: 5px;
 }

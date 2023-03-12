@@ -25,6 +25,7 @@
     flex-flow: column;
     border-right: solid 3px grey;
     padding-right: 6px;
+    gap: 10px;
 }
 
 .model-status {

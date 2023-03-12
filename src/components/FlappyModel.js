@@ -36,7 +36,6 @@ export default class FlappyModel extends Component {
         this.state = {
             started: false,
             game_timestep: 16,
-            training: false,
             game_data: null,
             total_agent_count: NUM_AGENTS,
             current_agent: 0,
@@ -82,18 +81,9 @@ export default class FlappyModel extends Component {
         this.current_weights[this.state.current_agent].fitness = fitness;
 
         if (this.state.current_agent === this.state.total_agent_count - 1) {
-            console.log('next generation');
-
-            const sum1 = this.current_weights.reduce((prev, curr) => ({ fitness: prev.fitness + curr.fitness })).fitness;
-            let sum = 0;
-
-            for (const fit of this.current_weights) {
-                sum += fit.fitness;
-            }
-
-            console.log({sum, sum1});
+            const sum = this.current_weights.reduce((prev, curr) => ({ fitness: prev.fitness + curr.fitness })).fitness;
             const normalized_fitnesses = this.current_weights.map((w) => ({ weights: w.weights, fitness: w.fitness / sum }));
-            console.log({normalized_fitnesses});
+            console.log({ normalized_fitnesses });
             let new_weights = [];
 
             const copy_and_mutate = (weights) => {
@@ -136,7 +126,7 @@ export default class FlappyModel extends Component {
             this.current_weights.sort((a, b) => b.fitness - a.fitness);
             const top_weights = this.current_weights.splice(0, 5).map((w) => Object.assign(w, { generation: this.state.current_generation }));
 
-            console.log({new_weights});
+            console.log({ new_weights });
             this.current_weights = new_weights;
             this.setState((old_state) => {
                 const new_top_weights = old_state.top_weights.concat(top_weights);
@@ -176,6 +166,53 @@ export default class FlappyModel extends Component {
         this.setState({ show_topology: checked });
     };
 
+    save_weights = () => {
+        const data = {
+            generation: this.state.current_generation,
+            weights: this.current_weights.map((cw) =>
+                cw.weights.map(
+                    (w) => ({ shape: w.shape, data: w.arraySync() })
+                )
+            )
+        };
+
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data)]), { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bhnnv_weights_gen${this.state.current_generation}.json`;
+        a.click();
+        a.remove();
+    };
+
+    load_weights = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+
+        input.oninput = () => {
+            const reader = new FileReader();
+            reader.readAsText(input.files[0], 'UTF-8');
+
+            reader.onload = () => {
+                const data = JSON.parse(reader.result);
+                // TODO: when we change the number of agents, this might change a bit as well
+                const new_current_weights = data.weights.map((cw) => ({ fitness: 0, weights: cw.map((w) => new tf.tensor(w.data, w.shape))}));
+
+                for (const phenotype of this.current_weights) {
+                    for (const t of phenotype.weights)
+                        t.dispose();
+                }
+
+                this.setState({ current_generation: data.generation, current_agent: 0 }); // TODO: Save/load top weights?
+                this.current_weights = new_current_weights;
+                this.game.game_reset();
+            };
+        };
+
+        input.click();
+        input.remove();
+    };
+
     render() {
         const wall_data = this.state.game_data === null ? null : this.state.game_data.walls.map((wall) => <span>x={wall.rect.x} y={wall.rect.y}</span>);
         const sorted_weights = this.current_weights.slice();
@@ -185,18 +222,20 @@ export default class FlappyModel extends Component {
             <div className='model-wrapper'>
                 <div className='model-controls'>
                     <Slider min={0.1} max={100.0} value={this.state.game_timestep} label='Timestep' onInput={this.on_timestep_change} />
-                    <Checkbox onChange={this.on_fast_forward_change} checked={false} label='Fast forward'></Checkbox>
-                    <Checkbox onChange={this.on_topology_visibility_change} checked={false} label='Show Topology Graph'></Checkbox>
+                    <Checkbox onChange={this.on_fast_forward_change} checked={false} label='Fast forward' />
+                    <Checkbox onChange={this.on_topology_visibility_change} checked={false} label='Show Topology Graph' />
+                    <Button role='normal' value='Save weights' onClick={this.save_weights} />
+                    <Button role='normal' value='Load weights' onClick={this.load_weights} />
                 </div>
                 <div className='model-app'>
                     {this.state.fast_forward &&
-                    <div className='fast-forward-banner'>
-                        <h1>Fast-forward in progress</h1>
-                        <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given mutation for 50,000 ticks.)</span>
-                    </div>
+                        <div className='fast-forward-banner'>
+                            <h1>Fast-forward in progress</h1>
+                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given mutation for 50,000 ticks.)</span>
+                        </div>
                     }
                     <canvas className={`game-canvas ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.canvas_ref} />
-                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} style={{ display: this.state.show_topology ? '' : 'none'}} width={800} height={600} ref={this.topology_canvas_ref} />
+                    <canvas className={`topology-overlay ${this.state.fast_forward ? 'dimmed' : ''}`} style={{ display: this.state.show_topology ? '' : 'none' }} width={800} height={600} ref={this.topology_canvas_ref} />
                 </div>
                 <div className='model-status'>
                     <Expandable title='Memory'>

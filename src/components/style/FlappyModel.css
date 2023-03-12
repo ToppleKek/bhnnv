@@ -75,3 +75,16 @@
 .game-canvas {
     height: 100%;
 }
+
+.playback-controls {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: 5px;
+}
+
+.playback-control-button {
+    flex: 1;
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    display: inline-block;
+}

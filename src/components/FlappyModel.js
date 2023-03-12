@@ -42,6 +42,7 @@ export default class FlappyModel extends Component {
             current_generation: 0,
             fast_forward: false,
             show_topology: false,
+            paused: false,
             top_weights: []
         };
     }
@@ -50,6 +51,15 @@ export default class FlappyModel extends Component {
         this.game.init(this.canvas_ref.current, this.state.game_timestep);
         this.topology_renderer.init(this.topology_canvas_ref.current, this.current_weights[this.state.current_agent].weights);
         this.game.do_frame();
+    }
+
+    componentDidUpdate(_, old_state) {
+        this.game.fast_forward = this.state.fast_forward;
+
+        if (old_state.paused && !this.state.paused)
+            this.game.play();
+        else if (!old_state.paused && this.state.paused)
+            this.game.pause();
     }
 
     componentWillUnmount() {
@@ -158,7 +168,6 @@ export default class FlappyModel extends Component {
     };
 
     on_fast_forward_change = (checked) => {
-        this.game.fast_forward = checked;
         this.setState({ fast_forward: checked });
     };
 
@@ -213,6 +222,15 @@ export default class FlappyModel extends Component {
         input.remove();
     };
 
+    pause_toggle = () => {
+        this.setState((old_state) => ({ paused: !old_state.paused }));
+    };
+
+    frame_step = () => {
+        this.setState({ paused: true });
+        this.game.step();
+    };
+
     render() {
         const wall_data = this.state.game_data === null ? null : this.state.game_data.walls.map((wall) => <span>x={wall.rect.x} y={wall.rect.y}</span>);
         const sorted_weights = this.current_weights.slice();
@@ -221,6 +239,10 @@ export default class FlappyModel extends Component {
         return (
             <div className='model-wrapper'>
                 <div className='model-controls'>
+                    <div className='playback-controls'>
+                        <Button className='playback-control-button' role='normal' value={this.state.paused ? '\uf04b' : '\uf04c'} onClick={this.pause_toggle} />
+                        <Button className='playback-control-button' role='normal' value={`\uf051`} onClick={this.frame_step} />
+                    </div>
                     <Slider min={0.1} max={100.0} value={this.state.game_timestep} label='Timestep' onInput={this.on_timestep_change} />
                     <Checkbox onChange={this.on_fast_forward_change} checked={false} label='Fast forward' />
                     <Checkbox onChange={this.on_topology_visibility_change} checked={false} label='Show Topology Graph' />
@@ -231,7 +253,7 @@ export default class FlappyModel extends Component {
                     {this.state.fast_forward &&
                         <div className='fast-forward-banner'>
                             <h1>Fast-forward in progress</h1>
-                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given mutation for 50,000 ticks.)</span>
+                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given mutation for 10,000 ticks.)</span>
                         </div>
                     }
                     <canvas className={`game-canvas ${this.state.fast_forward ? 'dimmed' : ''}`} width={800} height={600} ref={this.canvas_ref} />

@@ -9,11 +9,11 @@ export default class Button extends Component {
     };
 
     render() {
-        const class_list = `generic-button ${this.props.role}-button`;
+        const class_list = `generic-button ${this.props.role}-button ${this.props.className || ''}`;
 
         return (
             <div className={class_list} onClick={this.clicked}>
-                {this.props.value}
+                <span>{this.props.value}</span>
             </div>
         );
     }

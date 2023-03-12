@@ -2,6 +2,9 @@
     user-select: none;
     cursor: pointer;
     border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .positive-button {
@@ -31,5 +34,4 @@
 
 .normal-button:hover {
     background-color: var(--colour-interactable);
-
 }

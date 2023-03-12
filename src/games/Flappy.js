@@ -118,6 +118,7 @@ export default class Flappy {
         this.last_output = [];
         this.last_input = [];
         this.fast_forward = false;
+        this.paused = false;
     }
 
     init(canvas, time_step) {
@@ -285,6 +286,20 @@ export default class Flappy {
         // return Math.random() < 0.04;
     }
 
+    pause() {
+        this.paused = true;
+        window.cancelAnimationFrame(this.animation_frame);
+    }
+
+    play() {
+        if (this.paused) {
+            this.paused = false;
+            this.accumulator = 0;
+            this.current_time = 0;
+            this.do_frame();
+        }
+    }
+
     render() {
         if (!this.canvas || this.fast_forward)
             return;
@@ -294,6 +309,11 @@ export default class Flappy {
 
         this.bird.render(this.gl);
         this.walls.forEach((wall) => wall.render(this.gl));
+    }
+
+    step() {
+        this.tick();
+        this.render();
     }
 
     do_frame(dt) {
@@ -316,12 +336,12 @@ export default class Flappy {
             this.render();
         }
 
-        for (let i = 0; i < 50_000 && this.fast_forward; ++i) {
+        for (let i = 0; i < 10_000 && this.fast_forward; ++i) {
             if (!this.tick())
                 break;
         }
 
-        if (this.running)
+        if (this.running && !this.paused)
             this.animation_frame = window.requestAnimationFrame(this.do_frame.bind(this));
     }
 

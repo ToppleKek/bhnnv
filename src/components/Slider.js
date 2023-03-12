@@ -9,7 +9,6 @@ export default class Slider extends Component {
         document.addEventListener('mousemove', this.on_move);
         document.addEventListener('mouseup', this.on_mouse_up);
         this.state = {
-            value: props.value,
             down: false
         };
     }
@@ -27,6 +26,9 @@ export default class Slider extends Component {
             value = this.props.max;
         else if (value < this.props.min)
             value = this.props.min;
+
+        if (this.props.integer)
+            value = Math.trunc(value);
 
         this.props.onInput(value);
         this.setState({ value });
@@ -53,9 +55,9 @@ export default class Slider extends Component {
 
     render() {
         return (
-            <div className='slider-wrapper' ref={this.slider_ref} onMouseDown={this.on_mouse_down} style={{ background: `linear-gradient(to right, var(--colour-interactable) ${this.state.value / (this.props.max - this.props.min) * 100}%, var(--colour-grid_border) 1px)` }}>
+            <div className='slider-wrapper' ref={this.slider_ref} onMouseDown={this.on_mouse_down} style={{ background: `linear-gradient(to right, var(--colour-interactable) ${(this.props.value - this.props.min) / (this.props.max - this.props.min) * 100}%, var(--colour-grid_border) 1px)` }}>
                 <div className='slider-body' />
-                <span className='slider-text'>{this.props.label} - {this.state.value}</span>
+                <span className='slider-text'>{this.props.label} - {this.props.value}</span>
             </div>
         );
     }

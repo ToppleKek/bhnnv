@@ -3,7 +3,7 @@
     flex-flow: row;
     flex-grow: 1;
     gap: 5px;
-    overflow: clip;
+    overflow-y: clip;
 }
 
 .model-app span {
@@ -16,6 +16,7 @@
     flex-flow: column nowrap;
     justify-content: center;
     position: relative;
+    overflow: clip;
 }
 
 .model-controls {

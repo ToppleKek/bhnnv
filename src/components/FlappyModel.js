@@ -232,6 +232,9 @@ export default class FlappyModel extends Component {
     save_weights = () => {
         const data = {
             generation: this.state.current_generation,
+            total_agent_count: this.state.total_agent_count,
+            hidden_units: this.state.hidden_units,
+            mutation_rate: this.state.mutation_rate,
             weights: this.current_weights.map((cw) =>
                 cw.weights.map(
                     (w) => ({ shape: w.shape, data: w.arraySync() })
@@ -265,9 +268,23 @@ export default class FlappyModel extends Component {
                         t.dispose();
                 }
 
-                this.setState({ current_generation: data.generation, current_agent: 0 }); // TODO: Save/load top weights?
-                this.current_weights = new_current_weights;
-                this.game.game_reset();
+                this.setState({
+                    current_generation: data.generation,
+                    current_agent: 0,
+                    hidden_units: data.hidden_units,
+                    total_agent_count: data.total_agent_count,
+                    mutation_rate: data.mutation_rate
+                }, () => {
+                    model.dispose();
+                    model = tf.sequential({
+                        layers: [
+                            tf.layers.dense({ units: this.state.hidden_units, inputShape: [5], activation: 'sigmoid' }),
+                            tf.layers.dense({ units: 2, activation: 'softmax' })
+                        ],
+                    });
+                    this.current_weights = new_current_weights;
+                    this.game.game_reset();
+                }); // TODO: Save/load top weights?
             };
         };
 

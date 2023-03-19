@@ -39,6 +39,7 @@ export default class FlappyModel extends Component {
             show_topology: false,
             paused: false,
             mutation_rate: 0.1,
+            crossover_chance: 0.1,
             hidden_units: 12,
             staged_changes: {},
             top_weights: []
@@ -64,16 +65,16 @@ export default class FlappyModel extends Component {
 
     componentWillUnmount() {
         this.game.delete();
-        for (const phenotype of this.current_weights) {
-            for (const t of phenotype.weights)
+        for (const genotype of this.current_weights) {
+            for (const t of genotype.weights)
                 t.dispose();
         }
     }
 
     init_random_weights() {
         if (this.current_weights.length !== 0) {
-            for (const phenotype of this.current_weights) {
-                for (const t of phenotype.weights)
+            for (const genotype of this.current_weights) {
+                for (const t of genotype.weights)
                     t.dispose();
             }
         }
@@ -114,7 +115,7 @@ export default class FlappyModel extends Component {
         if (this.state.current_agent === this.state.total_agent_count - 1) {
             const sum = this.current_weights.reduce((prev, curr) => ({ fitness: prev.fitness + curr.fitness })).fitness;
             const normalized_fitnesses = this.current_weights.map((w) => ({ weights: w.weights, fitness: w.fitness / sum }));
-            let new_weights = [];
+            let parents = [];
 
             const copy_and_mutate = (weights) => {
                 const weight_copy = weights.map((w) => w.clone());
@@ -138,18 +139,48 @@ export default class FlappyModel extends Component {
                 return weight_copy;
             };
 
-            for (let i = 0; i < normalized_fitnesses.length; ++i) {
+            const weighted_select = (items, key) => {
                 let index = 0;
                 let r = Math.random();
                 while (r > 0) {
-                    r -= normalized_fitnesses[index].fitness;
+                    r -= items[index][key];
                     ++index;
                 }
                 --index;
-                console.log('selecting weights with fitness:', this.current_weights[index].fitness);
-                new_weights.push({ weights: copy_and_mutate(normalized_fitnesses[index].weights), fitness: 0 });
+                return index;
+            };
+
+            // Select parents
+            for (let i = 0; i < Math.floor(normalized_fitnesses.length / 2); ++i) {
+                const j = weighted_select(normalized_fitnesses, 'fitness');
+                console.log({j});
+                parents.push({ weights: this.current_weights[j].weights, fitness: this.current_weights[j].fitness });
             }
 
+            const new_weights = [];
+            const parent_sum = parents.reduce((prev, curr) => ({ fitness: prev.fitness + curr.fitness })).fitness;
+            const normalized_parents = parents.map((w) => ({ weights: w.weights, fitness: w.fitness / parent_sum }));
+            for (let i = 0; i < normalized_fitnesses.length; ++i) {
+                const mother = normalized_parents[weighted_select(normalized_parents, 'fitness')];
+                const father = normalized_parents[weighted_select(normalized_parents, 'fitness')];
+                let child = Math.random() < 0.5 ? mother : father;
+
+                if (Math.random() < this.state.crossover_chance) {
+                    const mother_weights = mother.weights[1].dataSync().slice();
+                    const father_weights = father.weights[1].dataSync().slice();
+                    const k = Math.floor(Math.random() * mother_weights.length);
+                    const child_weights = father_weights;
+                    for (let i = 0; i < k; ++i) {
+                        child_weights[i] = mother_weights[i];
+                    }
+
+                    const shape = child.weights[1].shape;
+                    child.weights[1].dispose();
+                    child.weights[1] = tf.tensor(child_weights, shape);
+                }
+
+                new_weights.push({ weights: copy_and_mutate(child.weights), fitness: 0 });
+            }
             this.current_weights.forEach((wf) => wf.weights.forEach((w) => w.dispose()));
 
             // Get top weights to update top all time weights
@@ -199,6 +230,10 @@ export default class FlappyModel extends Component {
 
     on_mutation_rate_change = (value) => {
         this.setState({ mutation_rate: value });
+    };
+
+    on_crossover_chance_change = (value) => {
+        this.setState({ crossover_chance: value });
     };
 
     on_total_agent_change = (value) => {
@@ -263,8 +298,8 @@ export default class FlappyModel extends Component {
                 const data = JSON.parse(reader.result);
                 const new_current_weights = data.weights.map((cw) => ({ fitness: 0, weights: cw.map((w) => new tf.tensor(w.data, w.shape))}));
 
-                for (const phenotype of this.current_weights) {
-                    for (const t of phenotype.weights)
+                for (const genotype of this.current_weights) {
+                    for (const t of genotype.weights)
                         t.dispose();
                 }
 
@@ -345,6 +380,7 @@ export default class FlappyModel extends Component {
                     <Button role='normal' value='Save weights' onClick={this.save_weights} />
                     <Button role='normal' value='Load weights' onClick={this.load_weights} />
                     <Slider min={0.01} max={1.0} value={this.state.mutation_rate} label='Mutation rate' onInput={this.on_mutation_rate_change} />
+                    <Slider min={0.01} max={1.0} value={this.state.crossover_chance} label='Crossover chance' onInput={this.on_crossover_chance_change} />
                     <Slider min={50} max={1000} value={this.state.staged_changes?.total_agent_count || this.state.total_agent_count} label='Population' onInput={this.on_total_agent_change} integer={true} />
                     <Slider min={4} max={20} value={this.state.staged_changes?.hidden_units || this.state.hidden_units} label='Hidden nodes' onInput={this.on_hidden_unit_change} integer={true} />
                 </div>
@@ -352,7 +388,7 @@ export default class FlappyModel extends Component {
                     {this.state.fast_forward &&
                         <div className='fast-forward-banner'>
                             <h1>Fast-forward in progress</h1>
-                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given phenotype for 10,000 ticks.)</span>
+                            <span>Draw calls are disabled and the simulation is running as fast as possible on your machine. (Each animation frame will now attempt to simulate a given genotype for 10,000 ticks.)</span>
                         </div>
                     }
                     {Object.keys(this.state.staged_changes).length === 0 ? null :
@@ -407,13 +443,13 @@ export default class FlappyModel extends Component {
                         </TaggedLabel>
                     </Expandable>
                     <Expandable title='Progress'>
-                        <TaggedLabel tag='Top Phenotypes'>
+                        <TaggedLabel tag='Top Genotypes'>
                             (this generation)
                             <div className='label-list'>
                                 {sorted_weights.splice(0, 5).map((w) => <span>{w.fitness.toString()}</span>)}
                             </div>
                         </TaggedLabel>
-                        <TaggedLabel tag='Top Phenotypes'>
+                        <TaggedLabel tag='Top Genotypes'>
                             (whole simulation)
                             <div className='label-list'>
                                 {this.state.top_weights.map((w) => <span>{w.fitness.toString()} - Generation {w.generation}</span>)}

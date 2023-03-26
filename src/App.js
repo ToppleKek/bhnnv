@@ -3,11 +3,9 @@ import * as Constants from './constants';
 import * as Status from './status/status';
 import * as RichPopup from './status/RichPopup';
 import * as tf from '@tensorflow/tfjs';
-import { Component, createRef } from 'react';
+import { Component } from 'react';
 import {
-    Selector,
     InlineButton,
-    Button,
     TestModel,
     FlappyModel
 } from './components';
@@ -33,7 +31,7 @@ class App extends Component {
             mobile: false,
             gpu: gl.getParameter(debug.UNMASKED_RENDERER_WEBGL),
             gpu_vendor: gl.getParameter(debug.UNMASKED_VENDOR_WEBGL),
-            model: 'test',
+            model: 'flappy',
             popup: {
                 rich: false,
                 rich_body: [],

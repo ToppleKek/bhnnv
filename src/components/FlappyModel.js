@@ -431,6 +431,9 @@ export default class FlappyModel extends Component {
                         <TaggedLabel tag='Generation'>
                             <span>{this.state.current_generation}</span>
                         </TaggedLabel>
+                        <TaggedLabel tag='Agent'>
+                            <span>{this.state.current_agent}</span>
+                        </TaggedLabel>
                         <TaggedLabel tag='Inputs'>
                             <div className='label-list'>
                                 {this.game.last_input.map((e) => <span>{e}</span>)}
